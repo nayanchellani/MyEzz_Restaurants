@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -16,70 +17,23 @@ const hasSupabaseCredentials = process.env.SUPABASE_URL && process.env.SUPABASE_
 let supabase = null;
 let useMockData = !hasSupabaseCredentials;
 
-// Initialize Supabase only if credentials are available
+// Initialize Supabase
 if (hasSupabaseCredentials) {
     try {
-        const { createClient } = await import('@supabase/supabase-js');
         supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-
-        // Test connection
-        const { error } = await supabase.from('orders').select('count', { count: 'exact', head: true });
-        if (error) {
-            console.warn('⚠️  Supabase connection failed, falling back to mock data');
-            useMockData = true;
-        } else {
-            console.log('✅ Successfully connected to Supabase');
-            useMockData = false;
-        }
+        console.log('✅ Initialized Supabase client');
     } catch (error) {
         console.warn('⚠️  Failed to initialize Supabase, using mock data:', error.message);
         useMockData = true;
     }
 }
 
-// Mock in-memory database (used when Supabase is not available)
-let mockOrders = [
-    {
-        id: '1',
-        order_id: 'ORD001',
-        customer_name: 'Yug Patel',
-        items: [
-            { name: 'Margherita Pizza', quantity: 1 },
-            { name: 'Caesar Salad', quantity: 1 }
-        ],
-        total: 249.99,
-        status: 'new',
-        verification_code: 'A1B2',
-        created_at: new Date().toISOString()
-    },
-    {
-        id: '2',
-        order_id: 'ORD002',
-        customer_name: 'Aksh Maheshwari',
-        items: [
-            { name: 'Chicken Burger', quantity: 2 },
-            { name: 'French Fries', quantity: 1 }
-        ],
-        total: 185.00,
-        status: 'preparing',
-        verification_code: 'C3D4',
-        prep_time: 25,
-        accepted_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        created_at: new Date().toISOString()
-    },
-    {
-        id: '3',
-        order_id: 'ORD003',
-        customer_name: 'Nayan Chellani',
-        items: [
-            { name: 'Pasta Carbonara', quantity: 1 }
-        ],
-        total: 157.50,
-        status: 'ready',
-        verification_code: 'E5F6',
-        created_at: new Date().toISOString()
-    }
-];
+// RESTAURANT ID LOGIC
+// Defaults to 2 (BE Bytes) if not specified in query param ?restaurantId=X
+const getRestaurantId = (req) => {
+    const id = req.query.restaurantId || req.headers['x-restaurant-id'];
+    return id ? parseInt(id) : 2;
+};
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -90,197 +44,154 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Get today's metrics (GMV, Total Orders, Average Order Value)
-app.get('/api/metrics/today', async (req, res) => {
+// Get Restaurant Details
+app.get('/api/restaurant', async (req, res) => {
     try {
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const id = getRestaurantId(req);
+        if (useMockData) return res.json({ success: true, data: { name: 'Mock Restaurant' } });
 
-        let orders;
+        const { data, error } = await supabase
+            .from('restaurants')
+            .select('*')
+            .eq('id', id)
+            .single();
 
-        if (useMockData) {
-            // Use mock data
-            orders = mockOrders.filter(order => {
-                const orderDate = new Date(order.created_at);
-                return orderDate >= startOfDay && orderDate < endOfDay;
-            });
-        } else {
-            // Use Supabase
-            const { data, error } = await supabase
-                .from('orders')
-                .select('total, status')
-                .gte('created_at', startOfDay.toISOString())
-                .lt('created_at', endOfDay.toISOString());
-
-            if (error) throw error;
-            orders = data;
-        }
-
-        // Calculate metrics
-        const totalOrders = orders.length;
-        const gmv = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
-        const averageOrderValue = totalOrders > 0 ? gmv / totalOrders : 0;
-
-        console.log(`📊 Metrics: GMV=₹${gmv.toFixed(2)}, Orders=${totalOrders}, AOV=₹${averageOrderValue.toFixed(2)}`);
-
-        res.json({
-            success: true,
-            data: {
-                gmv: parseFloat(gmv.toFixed(2)),
-                totalOrders,
-                averageOrderValue: parseFloat(averageOrderValue.toFixed(2)),
-                date: startOfDay.toISOString().split('T')[0]
-            }
-        });
+        if (error) throw error;
+        res.json({ success: true, data });
     } catch (error) {
-        console.error('Error fetching metrics:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch metrics',
-            message: error.message
-        });
+        console.error('Error fetching restaurant:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch restaurant details' });
     }
 });
 
-// Create a new order (for testing purposes)
-app.post('/api/orders', async (req, res) => {
+// ============================================
+// Menu Items API Endpoints
+// ============================================
+
+// Get all menu items
+app.get('/api/menu', async (req, res) => {
     try {
-        const { order_id, customer_name, items, total, status, verification_code } = req.body;
-
-        let newOrder;
-
         if (useMockData) {
-            // Use mock data
-            newOrder = {
-                id: String(mockOrders.length + 1),
-                order_id,
-                customer_name,
-                items,
-                total: parseFloat(total),
-                status,
-                verification_code,
-                created_at: new Date().toISOString()
-            };
-            mockOrders.push(newOrder);
-        } else {
-            // Use Supabase
-            const { data, error } = await supabase
-                .from('orders')
-                .insert([
-                    {
-                        order_id,
-                        customer_name,
-                        items,
-                        total,
-                        status,
-                        verification_code,
-                        created_at: new Date().toISOString()
-                    }
-                ])
-                .select();
-
-            if (error) throw error;
-            newOrder = data[0];
+            return res.json({ success: true, data: [] }); // Fallback empty for now
         }
 
-        console.log(`✅ New order created: ${order_id} - ₹${total}`);
+        const restaurantId = getRestaurantId(req);
+
+        // Fetch items joined with categories
+        const { data, error } = await supabase
+            .from('menu_items')
+            .select('*, categories(name)')
+            .eq('restaurant_id', restaurantId)
+            .order('name');
+
+        if (error) throw error;
+
+        // Transform to frontend format
+        const transformedItems = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            category: item.categories?.name || 'Uncategorized',
+            price: parseFloat(item.price),
+            // Defaulting inStock to true since column is missing in provided schema keys
+            inStock: true, 
+            isVeg: item.is_veg,
+            imageUrl: null // Skipping images as requested
+        }));
 
         res.json({
             success: true,
-            data: newOrder
+            data: transformedItems
         });
     } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to create order',
-            message: error.message
-        });
+        console.error('Error fetching menu items:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch menu items' });
     }
 });
 
-// Get all orders (optional - for debugging)
-app.get('/api/orders', async (req, res) => {
+// Get all categories
+app.get('/api/categories', async (req, res) => {
     try {
-        let orders;
+        if (useMockData) return res.json({ success: true, data: [] });
 
-        if (useMockData) {
-            orders = mockOrders;
-        } else {
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(100);
+        const { data, error } = await supabase
+            .from('categories')
+            .select('id, name')
+            .order('name');
 
-            if (error) throw error;
-            orders = data;
-        }
+        if (error) throw error;
 
         res.json({
             success: true,
-            data: orders
+            data: data
         });
     } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch orders',
-            message: error.message
-        });
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch categories' });
     }
 });
 
-// Delete an order (for testing)
-app.delete('/api/orders/:orderId', async (req, res) => {
+// Add menu item
+app.post('/api/menu', async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const { name, category, price, isVeg } = req.body;
 
-        if (useMockData) {
-            const initialLength = mockOrders.length;
-            mockOrders = mockOrders.filter(order => order.order_id !== orderId);
+        if (useMockData) return res.status(500).json({ error: 'Supabase not connected' });
 
-            if (mockOrders.length < initialLength) {
-                console.log(`🗑️  Deleted order: ${orderId}`);
-                res.json({ success: true, message: 'Order deleted' });
-            } else {
-                res.status(404).json({ success: false, error: 'Order not found' });
-            }
-        } else {
-            const { error } = await supabase
-                .from('orders')
-                .delete()
-                .eq('order_id', orderId);
-
-            if (error) throw error;
-            console.log(`🗑️  Deleted order: ${orderId}`);
-            res.json({ success: true, message: 'Order deleted' });
+        // 1. Find category ID from name
+        const { data: catData, error: catError } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('name', category)
+            .single();
+        
+        if (catError) {
+             console.error('Category lookup failed:', catError);
+             return res.status(400).json({ error: 'Invalid category' });
         }
+
+        // 2. Insert item
+        const { data, error } = await supabase
+            .from('menu_items')
+            .insert([{
+                name,
+                category_id: catData.id,
+                price,
+                is_veg: isVeg,
+                restaurant_id: RESTAURANT_ID,
+                // price and is_veg map directly, no in_stock column
+            }])
+            .select();
+
+        if (error) throw error;
+
+        res.json({ success: true, data: data[0] });
+    } catch (error) {
+        console.error('Error adding item:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Delete menu item
+app.delete('/api/menu/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (useMockData) return res.status(500).json({ error: 'Supabase not connected' });
+
+        const { error } = await supabase
+            .from('menu_items')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
+
 // Start server
 app.listen(PORT, () => {
-    console.log('\n' + '='.repeat(60));
-    console.log('🚀 MyEzz Restaurant Backend Server');
-    console.log('='.repeat(60));
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-    console.log(`📊 Metrics endpoint: http://localhost:${PORT}/api/metrics/today`);
-    console.log(`💚 Health check: http://localhost:${PORT}/health`);
-    console.log(`📦 All orders: http://localhost:${PORT}/api/orders`);
-    console.log('');
-
-    if (useMockData) {
-        console.log('💡 Mode: MOCK - Using in-memory data (no Supabase required)');
-        console.log(`📝 Current orders in database: ${mockOrders.length}`);
-        console.log('💭 To use Supabase: Add credentials to backend/.env file');
-    } else {
-        console.log('💡 Mode: PRODUCTION - Connected to Supabase');
-        console.log('📝 Using live database');
-    }
-
-    console.log('='.repeat(60) + '\n');
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`Connected to Supabase Project: ${hasSupabaseCredentials ? 'YES' : 'NO'}`);
 });

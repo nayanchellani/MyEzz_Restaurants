@@ -361,3 +361,47 @@
 [data-theme="light"] .addButton svg {
   color: #FFFFFF;
 }
+
+/* Loading & Error States */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+  color: #94A3B8;
+  font-size: 16px;
+}
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: rgba(153, 0, 0, 0.1);
+  border-radius: 16px;
+  border: 2px dashed rgba(153, 0, 0, 0.3);
+}
+
+.errorText {
+  font-size: 16px;
+  color: #FF6B6B;
+  margin: 0;
+  text-align: center;
+}
+
+/* Light Mode Loading/Error */
+[data-theme="light"] .loadingState {
+  color: #64748B;
+}
+
+[data-theme="light"] .errorState {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+[data-theme="light"] .errorText {
+  color: #DC2626;
+}

@@ -1,20 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { CATEGORIES } from '../../types/menu';
 import styles from './AddItemModal.module.css';
 
-function AddItemModal({ isOpen, onClose, onAdd }) {
+function AddItemModal({ isOpen, onClose, onAdd, categories = [] }) {
   const [formData, setFormData] = useState({
     name: '',
-    category: CATEGORIES.MAINS,
+    category: '',
     price: '',
     isVeg: true
   });
 
+  // Set default category when categories load
+  useEffect(() => {
+    if (categories.length > 0 && !formData.category) {
+      setFormData(prev => ({ ...prev, category: categories[0] }));
+    }
+  }, [categories, formData.category]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.price) {
+    if (!formData.name.trim() || !formData.price || !formData.category) {
       return;
     }
 
@@ -28,7 +34,7 @@ function AddItemModal({ isOpen, onClose, onAdd }) {
     // Reset form
     setFormData({
       name: '',
-      category: CATEGORIES.MAINS,
+      category: categories.length > 0 ? categories[0] : '',
       price: '',
       isVeg: true
     });
@@ -70,7 +76,7 @@ function AddItemModal({ isOpen, onClose, onAdd }) {
               value={formData.name}
               onChange={handleChange}
               className={styles.input}
-              placeholder="e.g., Butter Chicken"
+              placeholder="e.g., Paneer Tikka"
               required
             />
           </div>
@@ -86,11 +92,12 @@ function AddItemModal({ isOpen, onClose, onAdd }) {
               onChange={handleChange}
               className={styles.select}
               required
+              disabled={categories.length === 0}
             >
-              <option value={CATEGORIES.STARTERS}>Starters</option>
-              <option value={CATEGORIES.MAINS}>Mains</option>
-              <option value={CATEGORIES.BREADS}>Breads</option>
-              <option value={CATEGORIES.BEVERAGES}>Beverages</option>
+              {categories.length === 0 && <option value="">Loading...</option>}
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
           </div>
 
