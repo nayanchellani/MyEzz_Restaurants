@@ -9,19 +9,33 @@ const api = axios.create({
     },
 });
 
-// Add interceptor to include restaurantId from URL if present
-api.interceptors.request.use((config) => {
-    const params = new URLSearchParams(window.location.search);
-    const restaurantId = params.get('restaurantId');
-    if (restaurantId) {
-        config.params = { ...config.params, restaurantId };
+// Extract restaurantId from URL path (e.g., /2/menu -> 2)
+const getRestaurantIdFromPath = () => {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const firstPart = pathParts[0];
+    
+    // Check if first part is a valid integer number
+    if (firstPart) {
+        const id = parseInt(firstPart, 10);
+        if (!isNaN(id) && id > 0) {
+            return id;
+        }
     }
-    return config;
+    return 1; // Default to 1 (Patel Juice Centre) if missing/invalid
+};
+
+// Add interceptor to include restaurantId from URL path
+api.interceptors.request.use((reqConfig) => {
+    const restaurantId = getRestaurantIdFromPath();
+    // Always attach valid ID
+    reqConfig.params = { ...reqConfig.params, restaurantId };
+    return reqConfig;
 });
 
-export async function getRestaurantDetails() {
+export async function getRestaurantDetails(restaurantId) {
     try {
-        const response = await api.get('/api/restaurant');
+        const params = restaurantId ? { restaurantId } : {};
+        const response = await api.get('/api/restaurant', { params });
         return response.data.data;
     } catch (error) {
         console.error('Error fetching restaurant details:', error);
@@ -29,9 +43,10 @@ export async function getRestaurantDetails() {
     }
 }
 
-export async function getMenuItems() {
+export async function getMenuItems(restaurantId) {
     try {
-        const response = await api.get('/api/menu');
+        const params = restaurantId ? { restaurantId } : {};
+        const response = await api.get('/api/menu', { params });
         return response.data.data;
     } catch (error) {
         console.error('Error fetching menu items:', error);
@@ -49,9 +64,10 @@ export async function getCategories() {
     }
 }
 
-export async function addMenuItem(itemData) {
+export async function addMenuItem(itemData, restaurantId) {
     try {
-        const response = await api.post('/api/menu', itemData);
+        const params = restaurantId ? { restaurantId } : {};
+        const response = await api.post('/api/menu', itemData, { params });
         return response.data.data;
     } catch (error) {
         console.error('Error adding menu item:', error);
@@ -72,4 +88,15 @@ export async function toggleStock(id, inStock) {
     // Current DB schema doesn't have stock status
     // optimistically return success
     return { id, inStock };
+}
+
+export async function updateRestaurant(data, restaurantId) {
+    try {
+        const params = restaurantId ? { restaurantId } : {};
+        const response = await api.put('/api/restaurant', data, { params });
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating restaurant details:', error);
+        throw new Error(error.response?.data?.error || 'Failed to update restaurant details');
+    }
 }

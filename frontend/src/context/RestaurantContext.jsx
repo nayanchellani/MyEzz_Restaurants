@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { getRestaurantDetails } from '../services/menuService';
 
 const RestaurantContext = createContext();
 
@@ -10,10 +11,32 @@ export const useRestaurant = () => {
   return context;
 };
 
-export const RestaurantProvider = ({ children }) => {
-  const [restaurantName] = useState('Demo Restaurant'); // Default name for MVP
+export const RestaurantProvider = ({ children, restaurantId }) => {
+  const [restaurantName, setRestaurantName] = useState('Loading...');
+  const [restaurantData, setRestaurantData] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (restaurantId) {
+      fetchRestaurantData();
+    }
+  }, [restaurantId]);
+
+  const fetchRestaurantData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getRestaurantDetails(restaurantId);
+      setRestaurantData(data);
+      setRestaurantName(data?.name || 'Unknown Restaurant');
+    } catch (error) {
+      console.error('Failed to fetch restaurant:', error);
+      setRestaurantName('Error Loading');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const setOnlineStatus = (status) => {
     setIsOnline(status);
@@ -24,13 +47,15 @@ export const RestaurantProvider = ({ children }) => {
   };
 
   const value = {
+    restaurantId,
     restaurantName,
-    isOnline,
-    restaurantName,
+    restaurantData,
     isOnline,
     setOnlineStatus,
     isProfileOpen,
-    toggleProfile
+    toggleProfile,
+    isLoading,
+    refetchRestaurant: fetchRestaurantData
   };
 
   return (

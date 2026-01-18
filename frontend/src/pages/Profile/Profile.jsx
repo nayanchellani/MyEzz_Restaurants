@@ -1,6 +1,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { updateRestaurant } from '../../services/menuService';
 import { 
   UtensilsCrossed,
   Copy,
@@ -45,46 +46,55 @@ const Profile = () => {
     riderAlerts: true
   });
 
-  // Original restaurant data (mock)
-  const originalRestaurantData = {
-    name: 'BE Bytes',
-    partnerId: 'MEZ-NSK-032',
+  // Fetch restaurant data from context
+  const { restaurantData, refetchRestaurant, isLoading, restaurantId } = useRestaurant();
+  // ... existing state ...
+
+  // Use real data or fallback to defaults if loading/missing
+  const currentData = restaurantData || {};
+
+  // Default values matching DB schema or reasonable fallbacks
+  const displayData = {
+    name: currentData.name || 'Loading...',
+    businessName: currentData.business_name || currentData.name || 'Not Available',
+    gstin: currentData.gstin || 'Not Available',
+    partnerId: `MEZ-${(currentData.id || 0).toString().padStart(3, '0')}`,
     isVerified: true,
-    logoInitial: 'BB',
-    
-    // Legal & Compliance
-    fssaiLicense: 'FSSAI21423000012345',
-    fssaiExpiry: '2026-03-15',
-    gstin: '27AABCU9603R1ZM',
-    businessName: 'BE Bytes Food Services Pvt. Ltd.',
-    categories: ['Multi-Cuisine', 'Fast Food', 'Vegetarian Options'],
-    
-    // Financial
-    bankAccount: '******4521',
-    ifscCode: 'HDFC0001234',
-    bankName: 'HDFC Bank',
-    payoutCycle: 'Daily Settlements',
-    weeklyEarnings: 47850,
-    
-    // Performance
-    rating: 4.2,
-    avgPrepTime: 12,
-    completionRate: 96.5
+    bankAccount: currentData.bank_account || 'Not Available',
+    ifscCode: currentData.ifsc_code || 'Not Available',
+    bankName: currentData.bank_name || 'Not Available',
+    payoutCycle: 'Daily Settlements', // Hardcoded for now as not in DB
+    weeklyEarnings: 0, // Not in DB yet
+    categories: ['Multi-Cuisine'], // Default
+    logoInitial: (currentData.name || 'R').substring(0, 2).toUpperCase()
   };
 
   // Editable fields state
   const [editableData, setEditableData] = useState({
-    name: originalRestaurantData.name,
-    businessName: originalRestaurantData.businessName,
-    gstin: originalRestaurantData.gstin
+    name: displayData.name,
+    businessName: displayData.businessName,
+    gstin: displayData.gstin
   });
 
   // Store original editable data for comparison
   const [originalEditableData, setOriginalEditableData] = useState({
-    name: originalRestaurantData.name,
-    businessName: originalRestaurantData.businessName,
-    gstin: originalRestaurantData.gstin
+    name: displayData.name,
+    businessName: displayData.businessName,
+    gstin: displayData.gstin
   });
+
+  // Sync state when data loads
+  useEffect(() => {
+    if (restaurantData) {
+        const newData = {
+            name: restaurantData.name || '',
+            businessName: restaurantData.business_name || restaurantData.name || '',
+            gstin: restaurantData.gstin || ''
+        };
+        setEditableData(newData);
+        setOriginalEditableData(newData);
+    }
+  }, [restaurantData]);
 
   // Check if data has changed
   const hasChanges = useCallback(() => {
@@ -122,7 +132,7 @@ const Profile = () => {
     setEditableData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!hasChanges()) {
       setIsEditing(false);
       return;
@@ -130,15 +140,32 @@ const Profile = () => {
 
     setToastState('loading');
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Prepare data for API
+      const updateData = {
+        name: editableData.name,
+        business_name: editableData.businessName,
+        gstin: editableData.gstin
+      };
+
+      await updateRestaurant(updateData, restaurantId);
+      
+      // Update local state and refetch
       setOriginalEditableData({ ...editableData });
+      await refetchRestaurant();
+      
       setToastState(null);
       setIsEditing(false);
       setShowSuccessToast(true);
-    }, 1500);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      // Ideally show error toast here, but for now reset toast state or show error state
+      setToastState(null); 
+      // You might want to keep isEditing true so user can try again
+      alert('Failed to save changes. Please try again.');
+    }
   };
-
+ 
   const handleReset = () => {
     setEditableData({ ...originalEditableData });
     setToastState(null);
@@ -154,8 +181,9 @@ const Profile = () => {
   };
 
   // Merge editable data with original data
-  const restaurantData = {
-    ...originalRestaurantData,
+  // Merge editable data with original data
+  const restaurantDataMerged = {
+    ...displayData,
     name: editableData.name,
     businessName: editableData.businessName,
     gstin: editableData.gstin
@@ -266,7 +294,7 @@ const Profile = () => {
                       placeholder="Restaurant Name"
                     />
                   ) : (
-                    <h1 className={styles.restaurantName}>{restaurantData.name}</h1>
+                    <h1 className={styles.restaurantName}>{restaurantDataMerged.name}</h1>
                   )}
 
                 </div>
@@ -313,7 +341,7 @@ const Profile = () => {
                       placeholder="GSTIN Number"
                     />
                   ) : (
-                    <span className={styles.cardValue}>{restaurantData.gstin}</span>
+                    <span className={styles.cardValue}>{restaurantDataMerged.gstin}</span>
                   )}
                   {isEditing ? (
                     <input
@@ -324,7 +352,7 @@ const Profile = () => {
                       placeholder="Business Name"
                     />
                   ) : (
-                    <span className={styles.cardMeta}>{restaurantData.businessName}</span>
+                    <span className={styles.cardMeta}>{restaurantDataMerged.businessName}</span>
                   )}
                 </div>
               </div>
@@ -338,7 +366,7 @@ const Profile = () => {
                 <div className={styles.cardRowContent}>
                   <span className={styles.cardLabel}>Restaurant Category</span>
                   <div className={styles.categoryTags}>
-                    {restaurantData.categories.map((cat, idx) => (
+                    {restaurantDataMerged.categories.map((cat, idx) => (
                       <span key={idx} className={styles.categoryTag}>{cat}</span>
                     ))}
                   </div>
@@ -367,8 +395,8 @@ const Profile = () => {
                 <div className={styles.cardRowContent}>
                   <span className={styles.cardLabel}>Bank Account</span>
                   <div className={styles.bankRow}>
-                    <span className={styles.cardValue}>
-                      {showBankDetails ? '1234567894521' : restaurantData.bankAccount}
+                  <span className={styles.cardValue}>
+                      {showBankDetails ? '1234567894521' : restaurantDataMerged.bankAccount}
                     </span>
                     <button 
                       className={styles.eyeBtn}
@@ -378,7 +406,7 @@ const Profile = () => {
                       {showBankDetails ? <EyeOff /> : <Eye />}
                     </button>
                   </div>
-                  <span className={styles.cardMeta}>{restaurantData.bankName}</span>
+                  <span className={styles.cardMeta}>{restaurantDataMerged.bankName}</span>
                 </div>
               </div>
 
@@ -390,7 +418,7 @@ const Profile = () => {
                 </div>
                 <div className={styles.cardRowContent}>
                   <span className={styles.cardLabel}>Payout Cycle</span>
-                  <span className={styles.cardValueHighlight}>{restaurantData.payoutCycle}</span>
+                  <span className={styles.cardValueHighlight}>{restaurantDataMerged.payoutCycle}</span>
                 </div>
               </div>
 
@@ -400,7 +428,7 @@ const Profile = () => {
                 <span className={styles.earningsLabel}>Total Earnings This Week</span>
                 <div className={styles.earningsValue}>
                   <IndianRupee className={styles.rupeeIcon} />
-                  <span>{restaurantData.weeklyEarnings.toLocaleString('en-IN')}</span>
+                  <span>{restaurantDataMerged.weeklyEarnings.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>

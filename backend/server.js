@@ -29,10 +29,20 @@ if (hasSupabaseCredentials) {
 }
 
 // RESTAURANT ID LOGIC
-// Defaults to 2 (BE Bytes) if not specified in query param ?restaurantId=X
+// Defaults to 1 (Patel Juice Centre) if id is invalid or missing
 const getRestaurantId = (req) => {
-    const id = req.query.restaurantId || req.headers['x-restaurant-id'];
-    return id ? parseInt(id) : 2;
+    // Check specific query param first, then header
+    let id = req.query.restaurantId || req.headers['x-restaurant-id'];
+    
+    // Parse integer strictly
+    const parsedId = parseInt(id, 10);
+    
+    // Validate: must be a number and greater than 0
+    if (!isNaN(parsedId) && parsedId > 0) {
+        return parsedId;
+    }
+    
+    return 1; // Default to ID 1
 };
 
 // Health check endpoint
@@ -157,7 +167,7 @@ app.post('/api/menu', async (req, res) => {
                 category_id: catData.id,
                 price,
                 is_veg: isVeg,
-                restaurant_id: RESTAURANT_ID,
+                restaurant_id: getRestaurantId(req), // Use dynamic restaurant ID
                 // price and is_veg map directly, no in_stock column
             }])
             .select();
@@ -186,6 +196,32 @@ app.delete('/api/menu/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Update Restaurant Details
+app.put('/api/restaurant', async (req, res) => {
+    try {
+        const id = getRestaurantId(req);
+        const { name, business_name, gstin } = req.body;
+
+        if (useMockData) {
+            // Mock update
+            return res.json({ success: true, data: { ...req.body, id } });
+        }
+
+        const { data, error } = await supabase
+            .from('restaurants')
+            .update({ name, business_name, gstin })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error updating restaurant:', error);
+        res.status(500).json({ success: false, error: 'Failed to update restaurant details' });
     }
 });
 

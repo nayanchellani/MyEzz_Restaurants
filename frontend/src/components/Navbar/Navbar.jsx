@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Home, UtensilsCrossed, BarChart3, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SettingsPanel from './SettingsPanel';
@@ -6,28 +6,32 @@ import styles from './Navbar.module.css';
 
 const Navbar = () => {
   const location = useLocation();
+  const { restaurantId } = useParams();
+  
+  // Ensure we have a valid ID, fallback to 1 if missing (though routing handles this)
+  const currentId = restaurantId || '1';
 
   const navigationItems = [
     {
-      path: '/orders',
+      path: `/${currentId}/orders`,
       name: 'Orders',
       icon: Home,
       ariaLabel: 'Navigate to Orders'
     },
     {
-      path: '/history',
+      path: `/${currentId}/history`,
       name: 'History',
       icon: Clock,
       ariaLabel: 'View Order History'
     },
     {
-      path: '/menu',
+      path: `/${currentId}/menu`,
       name: 'Menu',
       icon: UtensilsCrossed,
       ariaLabel: 'Navigate to Menu'
     },
     {
-      path: '/report',
+      path: `/${currentId}/report`,
       name: 'Dashboard', // Changed from Report to Dashboard
       icon: BarChart3,
       ariaLabel: 'Navigate to Dashboard'

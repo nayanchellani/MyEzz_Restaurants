@@ -4,14 +4,15 @@ import MenuItemCard from '../../components/MenuItemCard/MenuItemCard';
 import AddItemModal from '../../components/AddItemModal/AddItemModal';
 import SuccessToast from '../../components/ui/SuccessToast';
 import Spinner from '../../components/Spinner/Spinner';
-import { getMenuItems, getCategories, addMenuItem, toggleStock, deleteMenuItem, getRestaurantDetails } from '../../services/menuService';
+import { useRestaurant } from '../../context/RestaurantContext';
+import { getMenuItems, getCategories, addMenuItem, toggleStock, deleteMenuItem } from '../../services/menuService';
 import { STATUS_TABS } from '../../types/menu';
 import styles from './Menu.module.css';
 
 function Menu() {
+  const { restaurantName, restaurantId } = useRestaurant();
   const [menuItems, setMenuItems] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
-  const [restaurantName, setRestaurantName] = useState('MyEzz Restaurant');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -29,14 +30,12 @@ function Menu() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [items, cats, restaurant] = await Promise.all([
-        getMenuItems(),
-        getCategories(),
-        getRestaurantDetails()
+      const [items, cats] = await Promise.all([
+        getMenuItems(restaurantId),
+        getCategories()
       ]);
       setMenuItems(items);
       setAvailableCategories(cats.map(c => c.name));
-      if (restaurant?.name) setRestaurantName(restaurant.name);
     } catch (err) {
       console.error('Failed to load menu data:', err);
       setError('Failed to load menu. Please make sure backend is running.');
@@ -142,8 +141,7 @@ function Menu() {
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.headerLeft}>
-            <h1 className={styles.title}>{restaurantName}</h1>
-            <p className={styles.subtitle}>Menu & Inventory Management</p>
+            <h1 className={styles.title}>Menu & Inventory Management</h1>
           </div>
           <button 
             className={styles.addButton}
