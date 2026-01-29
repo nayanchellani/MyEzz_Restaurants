@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import SuccessToast from '../../components/ui/SuccessToast';
+
+// Lazy load Three.js for better initial load performance
+const ThreeBackground = lazy(() => import('../../components/ThreeBackground'));
 import {
   ChefHat,
   Bike,
@@ -15,10 +18,11 @@ import {
   ExternalLink,
   Phone,
   Mail,
+  Users,
 } from 'lucide-react';
 import styles from './Landing.module.css';
 
-const ROTATING_WORDS = ['effortlessly', 'profitably', 'securely', 'efficiently'];
+const ROTATING_WORDS = ['efficiently', 'profitably', 'effortlessly'];
 
 const FEATURES = [
   {
@@ -54,9 +58,9 @@ const FEATURES = [
 ];
 
 const STATS = [
-  { number: '30+', label: 'Trusted Local Partners' },
-  { number: '100%', label: 'Hyper-Local Support' },
-  { number: 'Daily', label: 'Instant Payout Cycles' },
+  { number: '2x', label: 'Faster Operations', icon: Zap },
+  { number: '30%', label: 'Cost Optimization', icon: TrendingUp },
+  { number: '30+', label: 'Active Partners', icon: Users },
 ];
 
 function Landing() {
@@ -141,43 +145,75 @@ function Landing() {
 
       {/* Hero Section */}
       <section className={styles.heroSection}>
-        <div className={styles.heroContent}>
-          <h1 className={styles.heroHeadline}>
-            <span className={styles.headlineStatic}>Scale your kitchen</span>
-            <span className={styles.headlineAnimated}>
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={wordIndex}
-                  className={styles.animatedWord}
-                  initial={{ y: 40, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -40, opacity: 0 }}
-                  transition={{
-                    type: 'spring',
-                    stiffness: 100,
-                    damping: 20,
-                  }}
-                >
-                  {ROTATING_WORDS[wordIndex]}
-                </motion.span>
-              </AnimatePresence>
-            </span>
-          </h1>
-          <p className={styles.heroSubtitle}>
-            Stop juggling apps and start scaling. Join an exclusive circle of local
-            partners using MyEzz to streamline every order, from prep to dispatch,
-            with real-time insights designed for the modern Indian kitchen.
-          </p>
-          <motion.button
-            className={styles.ctaButton}
-            onClick={handleGetStarted}
-            whileTap={{ scale: 0.98 }}
-          >
-            <span className={styles.ctaButtonText}>Get Started</span>
-            <span className={styles.ctaIconWrapper}>
-              <ChevronRight className={styles.ctaIcon} size={20} strokeWidth={2.5} />
-            </span>
-          </motion.button>
+        {/* Three.js Particle Background - Lazy loaded */}
+        <Suspense fallback={null}>
+          <ThreeBackground />
+        </Suspense>
+        <div className={styles.heroContainer}>
+            {/* Hero Content */}
+            <div className={styles.heroContent}>
+              <h1 className={styles.heroHeadline}>
+                <span className={styles.headlineStatic}>Grow Your Restaurant</span>
+                <span className={styles.headlineStatic}>
+                  Without <span className={styles.chaosHighlight}>the Chaos</span>
+                </span>
+              </h1>
+              
+              {/* Animated Text Below Headline */}
+              <div className={styles.animatedTextWrapper}>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={wordIndex}
+                    className={styles.animatedWord}
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -30, opacity: 0 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 100,
+                      damping: 20,
+                    }}
+                  >
+                    {ROTATING_WORDS[wordIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+
+              <p className={styles.heroSubtitle}>
+                One platform to manage orders, partners, performance, and growth – 
+                built for modern restaurant teams who want control, not complexity.
+              </p>
+              
+              <motion.button
+                className={styles.ctaButton}
+                onClick={handleGetStarted}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className={styles.ctaButtonText}>Get Started</span>
+                <span className={styles.ctaIconWrapper}>
+                  <ChevronRight className={styles.ctaIcon} size={20} strokeWidth={2.5} />
+                </span>
+              </motion.button>
+            </div>
+
+          {/* Stats Row - Below Two-Column Layout */}
+          <div className={styles.heroStatsRow}>
+            {STATS.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                className={styles.heroStatItem}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + index * 0.1, duration: 0.5 }}
+              >
+                <div className={styles.heroStatIcon}>
+                  <stat.icon size={24} />
+                </div>
+                <div className={styles.heroStatNumber}>{stat.number}</div>
+                <div className={styles.heroStatLabel}>{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -198,27 +234,6 @@ function Landing() {
               </div>
               <h3 className={styles.featureTitle}>{feature.title}</h3>
               <p className={styles.featureDescription}>{feature.description}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section id="stats" className={styles.statsSection}>
-        {/* Orange Radial Glow */}
-        <div className={styles.statsGlow} />
-        <div className={styles.statsGrid}>
-          {STATS.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              className={styles.statItem}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, duration: 0.4 }}
-            >
-              <div className={styles.statNumber}>{stat.number}</div>
-              <div className={styles.statLabel}>{stat.label}</div>
             </motion.div>
           ))}
         </div>
