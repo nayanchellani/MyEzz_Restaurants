@@ -6,6 +6,7 @@
   background-color: #0B0C10;
   position: relative;
   overflow-x: hidden;
+  max-width: 100vw;
 }
 
 /* ===== Film Grain Noise Overlay ===== */
@@ -223,6 +224,9 @@
   letter-spacing: -0.02em;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5),
                0 4px 40px rgba(0, 0, 0, 0.3);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .headlineStatic {
@@ -265,6 +269,8 @@
   margin-bottom: 2rem;
   max-width: 480px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* ===== Hero Stats Row ===== */
@@ -280,6 +286,9 @@
   -webkit-backdrop-filter: blur(12px);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .heroStatItem {
@@ -287,6 +296,8 @@
   padding: 1rem 2.5rem;
   position: relative;
   transition: transform 0.3s ease;
+  flex-shrink: 0;
+  min-width: 120px;
 }
 
 .heroStatItem:hover {
@@ -420,6 +431,8 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .featureCard {
@@ -707,26 +720,27 @@
   margin-bottom: 1rem;
 }
 
-.socialContactLink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  background: rgba(255, 102, 0, 0.12);
-  border: 1px solid rgba(255, 102, 0, 0.25);
-  border-radius: 10px;
-  color: #FF6600;
-  text-decoration: none;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 
-    0 4px 20px rgba(255, 102, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  position: relative;
-  overflow: hidden;
-}
+  .socialContactLink {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    min-width: 48px; /* Larger touch target */
+    background: rgba(255, 102, 0, 0.12);
+    border: 1px solid rgba(255, 102, 0, 0.25);
+    border-radius: 10px;
+    color: #FF6600;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 
+      0 4px 20px rgba(255, 102, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
 
 .socialContactLink::before {
   content: '';
@@ -965,6 +979,7 @@
   .navButton {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
+    min-height: 44px; /* Larger touch target */
   }
   
   /* Bigger logo for mobile viewers */
@@ -1012,12 +1027,14 @@
   .heroStatsRow {
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0;
+    gap: 0.5rem;
     margin-top: 3rem;
+    padding: 1rem;
   }
   
   .heroStatItem {
     padding: 0.75rem 1.25rem;
+    flex-basis: calc(50% - 0.25rem);
   }
   
   .heroStatItem:not(:last-child)::after {
@@ -1036,6 +1053,7 @@
     padding: 0.875rem 1.75rem;
     padding-right: 3.5rem;
     font-size: 1rem;
+    min-height: 48px; /* Larger touch target */
   }
   
   .featuresGrid {

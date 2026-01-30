@@ -68,6 +68,17 @@ function Landing() {
   const location = useLocation();
   const [wordIndex, setWordIndex] = useState(0);
   const [showLogoutToast, setShowLogoutToast] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 767);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (location.state?.showLogoutToast) {
@@ -145,10 +156,12 @@ function Landing() {
 
       {/* Hero Section */}
       <section className={styles.heroSection}>
-        {/* Three.js Particle Background - Lazy loaded */}
-        <Suspense fallback={null}>
-          <ThreeBackground />
-        </Suspense>
+{/* Three.js Particle Background - Only on desktop, lazy loaded */}
+        {!isMobile && (
+          <Suspense fallback={null}>
+            <ThreeBackground />
+          </Suspense>
+        )}
         <div className={styles.heroContainer}>
             {/* Hero Content */}
             <div className={styles.heroContent}>

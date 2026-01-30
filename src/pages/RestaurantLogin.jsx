@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Instagram, Phone, Mail, ExternalLink, User, Lock, Facebook, Twitter, Building2, MapPin } from "lucide-react";
 import "./RestaurantLogin.css";
+
+// Lazy load Three.js for better performance
+const ThreeBackground = lazy(() => import('../components/ThreeBackground'));
 
 export default function RestaurantLogin() {
   const navigate = useNavigate();
@@ -275,11 +278,18 @@ export default function RestaurantLogin() {
   if (isMobile) {
     return (
       <div style={wrapperStyle}>
+        {/* Three.js Background - Only on Desktop */}
+        {!isMobile && (
+          <Suspense fallback={null}>
+            <ThreeBackground />
+          </Suspense>
+        )}
+        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          style={{ width: '100%', maxWidth: '400px' }}
+          style={{ width: '100%', maxWidth: '400px', position: 'relative', zIndex: 10 }}
         >
           {!isActive ? <MobileLoginForm /> : <MobileSignupForm />}
         </motion.div>
@@ -287,15 +297,23 @@ export default function RestaurantLogin() {
     );
   }
 
-  // Desktop Layout (unchanged)
+  // Desktop Layout with Three.js Background
   return (
     <div style={wrapperStyle}>
+      {/* Three.js Background - Desktop Only */}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
+        <Suspense fallback={null}>
+          <ThreeBackground />
+        </Suspense>
+      </div>
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={`container ${isActive ? "active" : ""}`}
         id="container"
+        style={{ position: 'relative', zIndex: 1 }}
       >
 
         {/* Sign Up Form */}
